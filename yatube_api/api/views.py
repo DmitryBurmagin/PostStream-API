@@ -30,7 +30,7 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_permissions(self):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
-            self.permission_classes = [AllowAny,]
+            self.permission_classes = (AllowAny,)
         return super(GroupViewSet, self).get_permissions()
 
 
