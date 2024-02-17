@@ -1,33 +1,37 @@
 from django.shortcuts import get_object_or_404
-from posts.models import Follow, Group, Post
-from rest_framework import filters, permissions, viewsets
-from rest_framework.exceptions import MethodNotAllowed
+from requests import Response
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
 from .pagination import CustomPagination
-from .permissions import IsAdminUserOrReadOnly, IsAuthorOrReadOnly
+from posts.models import Group, Post
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
                           PostSerializer)
 
 
 class BaseViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (IsAuthorOrReadOnly, IsAuthenticatedOrReadOnly)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsAdminUserOrReadOnly,)
 
-    def create(self, request, *args, **kwargs):
-        raise MethodNotAllowed(
-            'POST',
-            detail='Группы можно создавать только администрации'
-        )
+    @action(detail=False, methods=['post', 'put', 'patch', 'delete'])
+    def not_allowed(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def get_permissions(self):
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            self.permission_classes = [AllowAny,]
+        return super(GroupViewSet, self).get_permissions()
 
 
 class PostViewSet(BaseViewSet):
@@ -36,9 +40,9 @@ class PostViewSet(BaseViewSet):
     pagination_class = LimitOffsetPagination
 
 
-class CommentViewSet(BaseViewSet):
+class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    pagination_class = None
+    permission_classes = (IsAuthorOrReadOnly, IsAuthenticatedOrReadOnly)
 
     def get_post(self):
         return get_object_or_404(Post, id=self.kwargs.get('post_id'))
@@ -52,14 +56,18 @@ class CommentViewSet(BaseViewSet):
         serializer.save(author=self.request.user, post=post)
 
 
-class FollowViewSet(BaseViewSet):
-    queryset = Follow.objects.all()
+class FollowViewSet(mixins.CreateModelMixin,
+                    mixins.ListModelMixin,
+                    mixins.RetrieveModelMixin,
+                    viewsets.GenericViewSet):
     serializer_class = FollowSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    pagination_class = None
     filter_backends = [filters.SearchFilter]
     search_fields = ['following__username']
 
     def get_queryset(self):
         user = self.request.user
-        return Follow.objects.filter(user=user)
+        queryset = user.follower.all()
+        search = self.request.query_params.get('search')
+        if search is not None:
+            queryset = queryset.filter(following__username__icontains=search)
+        return queryset

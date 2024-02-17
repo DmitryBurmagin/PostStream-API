@@ -10,14 +10,18 @@ class Group(models.Model):
     description = models.TextField()
 
     def __str__(self):
-        return self.title
+        return self.title[:20]
+
+    class Meta:
+        verbose_name = 'Группа'
+        verbose_name_plural = 'Группы'
 
 
 class Post(models.Model):
     text = models.TextField()
-    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='posts')
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     image = models.ImageField(
         upload_to='posts/', null=True, blank=True)
     group = models.ForeignKey(
@@ -26,7 +30,12 @@ class Post(models.Model):
     )
 
     def __str__(self):
-        return self.text
+        return self.text[:30]
+
+    class Meta:
+        verbose_name = 'Пост'
+        verbose_name_plural = 'Посты'
+        ordering = ['pub_date']
 
 
 class Comment(models.Model):
@@ -37,6 +46,14 @@ class Comment(models.Model):
     text = models.TextField()
     created = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return self.text[:30]
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ['-created']
 
 
 class Follow(models.Model):
@@ -52,4 +69,17 @@ class Follow(models.Model):
     )
 
     def __str__(self):
-        return self.following
+        return f'{self.user.username} -> {self.following.username}'
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'подписки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'following'], name='unique_follow'
+            ),
+            models.CheckConstraint(
+                name="%(app_label)s_%(class)s_prevent_self_follow",
+                check=~models.Q(user=models.F("following")),
+            ),
+        ]
