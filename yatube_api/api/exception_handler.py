@@ -1,11 +1,7 @@
 from django.http import Http404
-
+from rest_framework.exceptions import (NotAuthenticated, PermissionDenied,
+                                       ValidationError)
 from rest_framework.views import exception_handler
-from rest_framework.exceptions import (
-    NotAuthenticated,
-    ValidationError,
-    PermissionDenied
-)
 
 
 def custom_exception_handler(exc, context):
