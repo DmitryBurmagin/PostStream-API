@@ -1,15 +1,14 @@
 from django.shortcuts import get_object_or_404
-from requests import Response
-from rest_framework import filters, mixins, status, viewsets
-from rest_framework.decorators import action
+from rest_framework import filters, mixins, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 
-from .pagination import CustomPagination
+from api.pagination import CustomPagination
 from posts.models import Group, Post
-from .permissions import IsAuthorOrReadOnly
-from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
-                          PostSerializer)
+from api.permissions import IsAuthorOrReadOnly
+from api.serializers import (CommentSerializer, FollowSerializer,
+                             GroupSerializer,
+                             PostSerializer)
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -23,10 +22,7 @@ class BaseViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-
-    @action(detail=False, methods=['post', 'put', 'patch', 'delete'])
-    def not_allowed(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    permission_classes = (AllowAny,)
 
     def get_permissions(self):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:

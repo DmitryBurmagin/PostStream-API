@@ -4,13 +4,17 @@ from django.db import models
 User = get_user_model()
 
 
+MAX_TEXT_LENGTH = 30
+MAX_TEXT_LENGTH = 20
+
+
 class Group(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
     description = models.TextField()
 
     def __str__(self):
-        return self.title[:20]
+        return self.title[:MAX_TEXT_LENGTH]
 
     class Meta:
         verbose_name = 'Группа'
@@ -29,13 +33,13 @@ class Post(models.Model):
         related_name='posts', blank=True, null=True
     )
 
-    def __str__(self):
-        return self.text[:30]
-
     class Meta:
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
-        ordering = ['pub_date']
+        ordering = ('pub_date',)
+
+    def __str__(self):
+        return self.text[:MAX_TEXT_LENGTH]
 
 
 class Comment(models.Model):
@@ -47,13 +51,13 @@ class Comment(models.Model):
     created = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
 
-    def __str__(self):
-        return self.text[:30]
-
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ['-created']
+        ordering = ('-created',)
+
+    def __str__(self):
+        return self.text[:MAX_TEXT_LENGTH]
 
 
 class Follow(models.Model):
@@ -68,9 +72,6 @@ class Follow(models.Model):
         on_delete=models.CASCADE
     )
 
-    def __str__(self):
-        return f'{self.user.username} -> {self.following.username}'
-
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'подписки'
@@ -83,3 +84,6 @@ class Follow(models.Model):
                 check=~models.Q(user=models.F("following")),
             ),
         ]
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.following.username}'
