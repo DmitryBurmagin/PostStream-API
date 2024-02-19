@@ -24,11 +24,6 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = GroupSerializer
     permission_classes = (AllowAny,)
 
-    def get_permissions(self):
-        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
-            self.permission_classes = (AllowAny,)
-        return super(GroupViewSet, self).get_permissions()
-
 
 class PostViewSet(BaseViewSet):
     queryset = Post.objects.all()
